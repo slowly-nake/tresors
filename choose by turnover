@@ -1,0 +1,65 @@
+import tushare as ts
+import pandas as pd
+import numpy as np
+global name_cc, tover_cc
+tover_cc = []
+name_cc = []
+
+pf = pd.read_csv('deal_basics_data.csv')
+pf['code'] = pf['code'].astype(str)
+code = []
+for i in pf['code']:
+    zfill = i.zfill(6)
+    code.append(zfill)
+
+
+def choose(df):
+    global tover_c
+    n = 1 #衰退初始阶
+    i = 1
+    tail = len(df) % 25 
+    #余数的尾部
+    lens = len(df) - tail #25个交易日的倍数
+    lam = 0.94 #衰退速度
+    lam_s = lam * (1 - lam ** lens)/(1 - lam)
+    tail_index = df.tail(tail).index #余数尾部的索引
+    df1 = df.drop(tail_index) #去除多余项
+    tover_a = df1['turnover']
+    tover_c = 0 #累计衰退函数
+    while i <= lens:
+        tover_b = tover_a[0:25]
+        tover_c = tover_c + (sum(tover_b)/25 * lam ** n) / lam_s
+        n = n + 1
+        d = tover_a.head(25).index
+        tover_a = tover_a.drop(d)
+        i = i + 1
+
+
+def get_data_3year(name,sta,ed):
+    new_df = ts.get_hist_data(name, start = sta, end = ed)
+    if len(new_df['turnover']) > 200:
+        choose(new_df)
+        tover_cc.append(tover_c)
+        name_cc.append(name)
+
+        return 0
+
+    else:
+        return 0
+
+
+i = 0
+while i < len(code):
+
+    name = code[i]
+    # print(name)
+    b = get_data_3year(name, '2018-11-1', '2020-11-24')
+    i += 1
+
+
+finall = [name_cc, tover_cc]
+finall = np.transpose(finall)
+
+new_ = pd.DataFrame(finall)
+new_.to_csv('r\D:\python file\spyder\tover_c.csv')
+print(new_)
